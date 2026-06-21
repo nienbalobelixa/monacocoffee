@@ -35,6 +35,11 @@ export const ordersService = {
     return res.data
   },
 
+  update: async (id: string, data: any) => {
+    const res = await api.patch(`/orders/${id}`, data)
+    return res.data
+  },
+
   cancel: async (id: string) => {
     const res = await api.delete(`/orders/${id}`)
     return res.data

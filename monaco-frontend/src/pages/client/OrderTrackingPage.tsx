@@ -199,6 +199,9 @@ export default function OrderTrackingPage() {
           <Link to="/menu" className="btn btn-primary flex-1 justify-center">
             Đặt Thêm Món
           </Link>
+          <Link to="/pos" className="btn btn-success flex-1 justify-center">
+            Quản Lý trên POS
+          </Link>
         </div>
       </div>
     </div>

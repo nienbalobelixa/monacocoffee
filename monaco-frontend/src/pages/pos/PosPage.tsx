@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { posService } from '../../services/pos.service'
+import { ordersService } from '../../services/orders.service'
 import { productsService } from '../../services/products.service'
 import { categoriesService } from '../../services/categories.service'
 import { toast } from 'sonner'
@@ -52,6 +53,8 @@ export default function PosPage() {
     refetchInterval: 20000,
   })
 
+  const [loadOrderId, setLoadOrderId] = useState<string>('')
+
   const { data: catsData } = useQuery({
     queryKey: ['categories'],
     queryFn: categoriesService.getAll,
@@ -95,6 +98,7 @@ export default function PosPage() {
 
       refetchTables()
       qc.invalidateQueries({ queryKey: ['pos-tables'] })
+      qc.invalidateQueries({ queryKey: ['admin-orders'] })
     },
     onError: (e: any) => toast.error(e?.response?.data?.message || 'Lỗi tạo đơn hàng'),
   })
@@ -121,6 +125,7 @@ export default function PosPage() {
       setPaymentModal(false)
       refetchTables()
       qc.invalidateQueries({ queryKey: ['pos-tables'] })
+      qc.invalidateQueries({ queryKey: ['admin-orders'] })
     },
     onError: () => toast.error('Lỗi xử lý thanh toán'),
   })
@@ -131,6 +136,21 @@ export default function PosPage() {
 
   const totalPrice = cart.reduce((s, i) => s + i.price * i.quantity, 0)
   const totalItems = cart.reduce((s, i) => s + i.quantity, 0)
+
+  const orderToCart = (order: any): PosItem[] => (
+    (order?.items || []).map((it: any) => ({
+      productId: it.productId,
+      name: it.product?.name || '',
+      price: Number(it.unitPrice || it.product?.salePrice || it.product?.price || 0),
+      quantity: it.quantity,
+      image: it.product?.image,
+    }))
+  )
+
+  const getOpenTableOrder = (table: any) => {
+    const orders = table?.orders || []
+    return orders[0] || null
+  }
 
   const addToCart = (product: any) => {
     const price = Number(product.salePrice || product.price)
@@ -166,7 +186,41 @@ export default function PosPage() {
     }
   }
 
-  const restoreState = (tableId: string | null) => {
+  const restoreState = (tableId: string | null, table?: any) => {
+    if (tableId && table) {
+      const openOrder = getOpenTableOrder(table)
+      if (openOrder) {
+        const loadedCart = orderToCart(openOrder)
+        setCart(loadedCart)
+        setCurrentOrderId(openOrder.id)
+        setCurrentOrderNumber(openOrder.orderNumber)
+        setNote(openOrder.note || '')
+        setTableStates((prev) => ({
+          ...prev,
+          [tableId]: {
+            cart: loadedCart,
+            orderId: openOrder.id,
+            orderNumber: openOrder.orderNumber,
+            note: openOrder.note || '',
+          },
+        }))
+        return
+      }
+
+      const cachedState = tableStates[tableId]
+      if (cachedState?.orderId) {
+        setCart([])
+        setCurrentOrderId(null)
+        setCurrentOrderNumber(null)
+        setNote('')
+        setTableStates((prev) => ({
+          ...prev,
+          [tableId]: { cart: [], orderId: null, orderNumber: null, note: '' },
+        }))
+        return
+      }
+    }
+
     const state = tableId ? tableStates[tableId] : takeawayState
     setCart(state?.cart || [])
     setCurrentOrderId(state?.orderId || null)
@@ -179,7 +233,7 @@ export default function PosPage() {
     saveCurrentState(currentTableId)
     setSelectedTable(table)
     const newTableId = table?.id || null
-    restoreState(newTableId)
+    restoreState(newTableId, table)
   }
 
   const handleSendToKitchen = () => {
@@ -190,6 +244,63 @@ export default function PosPage() {
       items: cart.map((i) => ({ productId: i.productId, quantity: i.quantity })),
       note: note || undefined,
     })
+  }
+
+  const loadOrder = async (orderId: string) => {
+    if (!orderId) return
+    try {
+      const res = await ordersService.getById(orderId)
+      const order = res.data || res
+      if (!order) { toast.error('Không tìm thấy đơn'); return }
+      const loadedCart = orderToCart(order)
+      setCart(loadedCart)
+      setCurrentOrderId(order.id)
+      setCurrentOrderNumber(order.orderNumber)
+      setNote(order.note || '')
+      // set table if present
+      if (order.tableId) {
+        const table = tables.find((t: any) => t.id === order.tableId)
+        if (table) handleSelectTable(table)
+      }
+      toast.success('Đã tải đơn')
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Lỗi khi tải đơn')
+    }
+  }
+
+  const saveOrderChanges = async () => {
+    if (!currentOrderId) { toast.error('Chưa có đơn nào để lưu'); return }
+    try {
+      await ordersService.update(currentOrderId, {
+        note: note || undefined,
+        tableId: selectedTable?.id || undefined,
+        items: cart.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+      })
+      toast.success('Lưu thay đổi đơn thành công')
+      refetchTables()
+      qc.invalidateQueries({ queryKey: ['pos-tables'] })
+      qc.invalidateQueries({ queryKey: ['admin-orders'] })
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Lỗi khi lưu đơn')
+    }
+  }
+
+  const cancelOrder = async () => {
+    if (!currentOrderId) { toast.error('Chưa có đơn để hủy'); return }
+    try {
+      await ordersService.cancel(currentOrderId)
+      toast.success('Đã hủy đơn')
+      // clear local state
+      setCart([])
+      setCurrentOrderId(null)
+      setCurrentOrderNumber(null)
+      setNote('')
+      refetchTables()
+      qc.invalidateQueries({ queryKey: ['pos-tables'] })
+      qc.invalidateQueries({ queryKey: ['admin-orders'] })
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Lỗi khi hủy đơn')
+    }
   }
 
   const handleConfirmPayment = () => {
@@ -239,6 +350,10 @@ export default function PosPage() {
               style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}>
               <RotateCcw size={14} />
             </button>
+            <div className="flex items-center gap-2 ml-2">
+              <input value={loadOrderId} onChange={(e) => setLoadOrderId(e.target.value)} placeholder="Order ID" className="input input-sm" />
+              <button onClick={() => loadOrder(loadOrderId)} className="btn btn-sm">Tải</button>
+            </div>
           </div>
         </div>
 
@@ -414,9 +529,15 @@ export default function PosPage() {
             {currentOrderId ? 'Thanh Toán' : 'Gửi bếp'}
           </button>
           {currentOrderId && (
-            <p className="text-xs mt-2 text-yellow-200" style={{ color: '#facc15' }}>
-              Đã gửi bếp #{currentOrderNumber}. Nhấn Thanh Toán khi khách trả.
-            </p>
+            <div>
+              <p className="text-xs mt-2 text-yellow-200" style={{ color: '#facc15' }}>
+                Đã gửi bếp #{currentOrderNumber}. Nhấn Thanh Toán khi khách trả.
+              </p>
+              <div className="flex gap-2 mt-2">
+                <button onClick={saveOrderChanges} className="btn btn-outline btn-sm">Lưu thay đổi</button>
+                <button onClick={cancelOrder} className="btn btn-error btn-sm">Hủy đơn</button>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -425,7 +546,7 @@ export default function PosPage() {
       {paymentModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.75)' }}
-            onClick={() => !orderMutation.isPending && setPaymentModal(false)} />
+            onClick={() => !payMutation.isPending && setPaymentModal(false)} />
           <div className="relative bg-white rounded-2xl p-6 w-full max-w-sm z-10 shadow-2xl">
             <h3 className="text-xl font-bold mb-1" style={{ fontFamily: 'Playfair Display, serif', color: '#2d1200' }}>
               Thanh Toán
@@ -464,11 +585,11 @@ export default function PosPage() {
             </div>
 
             <div className="flex gap-3">
-              <button onClick={() => setPaymentModal(false)} disabled={orderMutation.isPending}
+              <button onClick={() => setPaymentModal(false)} disabled={payMutation.isPending}
                 className="btn btn-outline flex-1">Hủy</button>
-              <button onClick={handleConfirmPayment} disabled={orderMutation.isPending}
+              <button onClick={handleConfirmPayment} disabled={payMutation.isPending}
                 className="btn btn-primary flex-1 justify-center">
-                {orderMutation.isPending
+                {payMutation.isPending
                   ? <><Loader2 size={16} className="animate-spin" /> Xử lý...</>
                   : '✓ Xác Nhận'}
               </button>

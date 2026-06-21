@@ -22,6 +22,11 @@ export default function CheckoutPage() {
   const subtotal = getTotalPrice()
 
   const handleCheckout = async () => {
+    if (!isAuthenticated) {
+      toast.error('Vui lòng đăng nhập để đặt hàng và xem lịch sử đơn');
+      navigate('/auth/login')
+      return
+    }
     if (items.length === 0) { toast.error('Giỏ hàng trống!'); return }
     if (orderType === 'DELIVERY' && !deliveryAddress.trim()) {
       toast.error('Vui lòng nhập địa chỉ giao hàng')
