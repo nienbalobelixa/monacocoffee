@@ -3,7 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { OrdersService } from '../orders/orders.service';
 import { PaymentsService } from '../payments/payments.service';
 import { CreateOrderDto } from '../orders/dto/create-order.dto';
-import { PaymentMethod } from '@prisma/client';
+import { OrderStatus, PaymentMethod, Role } from '@prisma/client';
 
 @Injectable()
 export class PosService {
@@ -12,6 +12,14 @@ export class PosService {
     private ordersService: OrdersService,
     private paymentsService: PaymentsService,
   ) {}
+
+  private readonly openTableStatuses = [
+    OrderStatus.PENDING,
+    OrderStatus.CONFIRMED,
+    OrderStatus.PREPARING,
+    OrderStatus.READY,
+    OrderStatus.DELIVERING,
+  ];
 
   async createSale(
     dto: CreateOrderDto,
@@ -32,6 +40,23 @@ export class PosService {
   }
 
   async createOrder(dto: CreateOrderDto, staffId: string) {
+    if (dto.tableId) {
+      const activeOrder = await this.prisma.order.findFirst({
+        where: {
+          tableId: dto.tableId,
+          status: { in: this.openTableStatuses },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (activeOrder) {
+        return this.ordersService.update(activeOrder.id, dto, {
+          id: staffId,
+          role: Role.STAFF,
+        });
+      }
+    }
+
     return this.ordersService.create(dto, undefined, staffId);
   }
 

@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, Delete } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { UpdateOrderDto } from './dto/update-order.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -11,8 +12,9 @@ import { Role, OrderStatus } from '@prisma/client';
 export class OrdersController {
   constructor(private ordersService: OrdersService) {}
 
+  @UseGuards(JwtAuthGuard)
   @Post()
-  create(@Body() dto: CreateOrderDto, @Query('userId') userId?: string) {
+  create(@Body() dto: CreateOrderDto, @CurrentUser('id') userId: string) {
     return this.ordersService.create(dto, userId);
   }
 
@@ -35,6 +37,12 @@ export class OrdersController {
     return this.ordersService.findOne(id);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateOrderDto, @CurrentUser() user: any) {
+    return this.ordersService.update(id, dto, user);
+  }
+
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN, Role.MANAGER, Role.STAFF)
   @Patch(':id/status')
@@ -44,7 +52,10 @@ export class OrdersController {
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  cancel(@Param('id') id: string, @CurrentUser('id') userId: string) {
-    return this.ordersService.cancel(id, userId);
+  cancel(@Param('id') id: string, @CurrentUser() user: any) {
+    if (user?.role === Role.ADMIN || user?.role === Role.MANAGER) {
+      return this.ordersService.remove(id, user);
+    }
+    return this.ordersService.cancel(id, user);
   }
 }
