@@ -12,11 +12,12 @@ async function bootstrap() {
   
   app.use(helmet());
   
+  // ĐÃ SỬA LỖI NETWORK ERROR Ở ĐÂY
   app.enableCors({
-    origin: [process.env.FRONTEND_URL || 'http://localhost:5173', 'http://localhost:5174'],
+    origin: true, // Tự động chấp nhận mọi tên miền gọi tới (bao gồm cả Vercel)
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
   
   app.useGlobalPipes(
