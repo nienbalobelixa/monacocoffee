@@ -20,4 +20,9 @@ export const posService = {
     const res = await api.post(`/pos/payment/${orderId}`, { method })
     return res.data
   },
+
+  getOrdersToday: async (status?: string) => {
+    const res = await api.get('/pos/orders-today', { params: status ? { status } : {} })
+    return res.data
+  },
 }
