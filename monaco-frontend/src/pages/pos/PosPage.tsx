@@ -5,7 +5,9 @@ import { productsService } from '../../services/products.service'
 import { categoriesService } from '../../services/categories.service'
 import { toast } from 'sonner'
 import { useState } from 'react'
-import { Plus, Minus, Trash2, ShoppingCart, CreditCard, Loader2, RotateCcw } from 'lucide-react'
+import { Plus, Minus, Trash2, ShoppingCart, CreditCard, Loader2, RotateCcw, Printer } from 'lucide-react'
+import { printKitchenTicket, printReceipt } from '../../utils/print.service'
+import { useAuthStore } from '../../store/auth.store'
 
 const formatPrice = (p: number) => (p || 0).toLocaleString('vi-VN') + 'đ'
 
@@ -69,6 +71,8 @@ export default function PosPage() {
     }),
   })
 
+  const staffName = useAuthStore((s) => s.user?.fullName)
+
   const orderMutation = useMutation({
     mutationFn: (data: any) => posService.createOrder(data),
     onSuccess: (res) => {
@@ -96,6 +100,22 @@ export default function PosPage() {
         })
       }
 
+      // 🖨️ In phiếu bếp
+      printKitchenTicket({
+        orderNumber: order.orderNumber || order.id,
+        tableName: selectedTable ? `Bàn ${selectedTable.number}` : 'Mang đi',
+        type: order.type || (selectedTable ? 'DINE_IN' : 'TAKEAWAY'),
+        items: cart.map(i => ({
+          name: i.name,
+          quantity: i.quantity,
+          unitPrice: i.price,
+          subtotal: i.price * i.quantity,
+        })),
+        note: note || undefined,
+        createdAt: new Date(),
+        staffName: staffName || undefined,
+      })
+
       refetchTables()
       qc.invalidateQueries({ queryKey: ['pos-tables'] })
       qc.invalidateQueries({ queryKey: ['admin-orders'] })
@@ -106,8 +126,29 @@ export default function PosPage() {
   const payMutation = useMutation({
     mutationFn: ({ orderId, method }: { orderId: string; method: string }) =>
       posService.processPayment(orderId, method),
-    onSuccess: () => {
+    onSuccess: (_res, vars) => {
       toast.success('💰 Thanh toán thành công!')
+
+      // 🖨️ In hóa đơn thanh toán
+      const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0)
+      printReceipt({
+        orderNumber: currentOrderNumber || currentOrderId || '',
+        tableName: selectedTable ? `Bàn ${selectedTable.number}` : 'Mang đi',
+        items: cart.map(i => ({
+          name: i.name,
+          quantity: i.quantity,
+          unitPrice: i.price,
+          subtotal: i.price * i.quantity,
+        })),
+        subtotal,
+        discount: 0,
+        total: subtotal,
+        paymentMethod: vars.method,
+        note: note || undefined,
+        paidAt: new Date(),
+        cashierName: staffName || undefined,
+      })
+
       const currentTableId = selectedTable?.id || null
       if (currentTableId) {
         setTableStates((prev) => ({
@@ -530,11 +571,24 @@ export default function PosPage() {
           </button>
           {currentOrderId && (
             <div>
-              <p className="text-xs mt-2 text-yellow-200" style={{ color: '#facc15' }}>
-                Đã gửi bếp #{currentOrderNumber}. Nhấn Thanh Toán khi khách trả.
+              <p className="text-xs mt-2" style={{ color: '#facc15' }}>
+                🖨️ Đã in phiếu bếp • #{currentOrderNumber}
               </p>
               <div className="flex gap-2 mt-2">
-                <button onClick={saveOrderChanges} className="btn btn-outline btn-sm">Lưu thay đổi</button>
+                <button
+                  onClick={() => printKitchenTicket({
+                    orderNumber: currentOrderNumber || currentOrderId || '',
+                    tableName: selectedTable ? `Bàn ${selectedTable.number}` : 'Mang đi',
+                    type: selectedTable ? 'DINE_IN' : 'TAKEAWAY',
+                    items: cart.map(i => ({ name: i.name, quantity: i.quantity, unitPrice: i.price, subtotal: i.price * i.quantity })),
+                    note: note || undefined,
+                    staffName: staffName || undefined,
+                  })}
+                  className="btn btn-outline btn-sm flex items-center gap-1"
+                >
+                  <Printer size={12} /> In lại phiếu
+                </button>
+                <button onClick={saveOrderChanges} className="btn btn-outline btn-sm">Lưu</button>
                 <button onClick={cancelOrder} className="btn btn-error btn-sm">Hủy đơn</button>
               </div>
             </div>
@@ -549,10 +603,13 @@ export default function PosPage() {
             onClick={() => !payMutation.isPending && setPaymentModal(false)} />
           <div className="relative bg-white rounded-2xl p-6 w-full max-w-sm z-10 shadow-2xl">
             <h3 className="text-xl font-bold mb-1" style={{ fontFamily: 'Playfair Display, serif', color: '#2d1200' }}>
-              Thanh Toán
+              Thanh Toán 🖨️
             </h3>
-            <p className="text-sm mb-5" style={{ color: '#9ca3af' }}>
+            <p className="text-sm mb-1" style={{ color: '#9ca3af' }}>
               {selectedTable ? `Bàn ${selectedTable.number}` : 'Mang đi'} • {totalItems} món
+            </p>
+            <p className="text-xs mb-4" style={{ color: '#16a34a' }}>
+              ✅ Hóa đơn sẽ được in tự động sau khi xác nhận
             </p>
 
             <div className="flex flex-col gap-3 mb-5">
