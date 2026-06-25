@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, UseGuards, Query } from '@nestjs/common';
 import { PosService } from './pos.service';
 import { CreateOrderDto } from '../orders/dto/create-order.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -40,6 +40,11 @@ export class PosController {
   @Get('active-orders')
   getActiveOrders() {
     return this.posService.getActiveOrders();
+  }
+
+  @Get('orders-today')
+  getOrdersToday(@Query('status') status?: string) {
+    return this.posService.getOrdersToday(status);
   }
 
   @Get('tables')
