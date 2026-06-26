@@ -11,10 +11,16 @@ export class ReservationsService {
   }
 
   async findAll(query: any) {
-    const { page = 1, limit = 10, status } = query;
+    const { page = 1, limit = 10, status, date } = query;
     const { skip, take } = paginate(page, limit);
     const where: any = {};
     if (status) where.status = status;
+    if (date) {
+      const start = new Date(`${date}T00:00:00.000Z`);
+      const end = new Date(start);
+      end.setUTCDate(end.getUTCDate() + 1);
+      where.date = { gte: start, lt: end };
+    }
     const [data, total] = await Promise.all([
       this.prisma.reservation.findMany({
         where,

@@ -24,7 +24,11 @@ export default function UsersAdminPage() {
     onError: () => toast.error('Có lỗi xảy ra'),
   })
 
-  const users = data?.data || []
+  const users = Array.isArray(data?.data)
+    ? data.data
+    : Array.isArray(data?.data?.data)
+      ? data.data.data
+      : []
 
   return (
     <div className="animate-fade-in">

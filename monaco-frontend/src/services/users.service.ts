@@ -12,17 +12,17 @@ export const usersService = {
   },
 
   getProfile: async () => {
-    const res = await api.get('/users/profile')
+    const res = await api.get('/users/me')
     return res.data
   },
 
   updateProfile: async (data: object) => {
-    const res = await api.patch('/users/profile', data)
+    const res = await api.patch('/users/me/profile', data)
     return res.data
   },
 
   changePassword: async (data: { oldPassword: string; newPassword: string }) => {
-    const res = await api.patch('/users/change-password', data)
+    const res = await api.patch('/users/me/password', data)
     return res.data
   },
 
