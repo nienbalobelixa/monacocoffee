@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import { ordersService } from '../../services/orders.service'
 import { CheckCircle2, Clock, ChefHat, Package, Bike, XCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 
 const formatPrice = (p: number) => p?.toLocaleString('vi-VN') + 'đ'
 
@@ -27,6 +29,7 @@ const statusLabel: Record<string, string> = {
 
 export default function OrderTrackingPage() {
   const { id } = useParams<{ id: string }>()
+  const lastStatus = useRef<string | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['order', id],
@@ -36,6 +39,14 @@ export default function OrderTrackingPage() {
   })
 
   const order = data?.data
+
+  useEffect(() => {
+    if (!order?.status) return
+    if (lastStatus.current && lastStatus.current !== order.status) {
+      toast.info(`Trang thai don hang: ${statusLabel[order.status] || order.status}`)
+    }
+    lastStatus.current = order.status
+  }, [order?.status])
 
   if (isLoading) return (
     <div className="section">

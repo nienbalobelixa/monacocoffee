@@ -19,6 +19,7 @@ export default function OrdersAdminPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['admin-orders', status, page],
     queryFn: () => ordersService.getAll({ status: status || undefined, page, limit: 15 }),
+    refetchInterval: 10000,
   })
 
   const updateMutation = useMutation({
