@@ -6,7 +6,7 @@ import { categoriesService } from '../../services/categories.service'
 import { toast } from 'sonner'
 import { useState } from 'react'
 import { Plus, Minus, Trash2, ShoppingCart, CreditCard, Loader2, RotateCcw, Printer } from 'lucide-react'
-import { printKitchenTicket, printReceipt } from '../../utils/print.service'
+import { printKitchenTicket, printReceipt, savePrintContent, buildKitchenText, buildReceiptText, isAndroidWebView } from '../../utils/print.service'
 import { useAuthStore } from '../../store/auth.store'
 
 const formatPrice = (p: number) => (p || 0).toLocaleString('vi-VN') + 'đ'
@@ -100,7 +100,22 @@ export default function PosPage() {
         })
       }
 
-      // 🖨️ In phiếu bếp
+      // 🖨️ In phiếu bếp + lưu vào FAB Android
+      const kitchenText = buildKitchenText({
+        orderNumber: order.orderNumber || order.id,
+        tableName: selectedTable ? `Bàn ${selectedTable.number}` : 'Mang đi',
+        type: order.type || (selectedTable ? 'DINE_IN' : 'TAKEAWAY'),
+        items: cart.map(i => ({
+          name: i.name,
+          quantity: i.quantity,
+          unitPrice: i.price,
+          subtotal: i.price * i.quantity,
+        })),
+        note: note || undefined,
+        createdAt: new Date(),
+        staffName: staffName || undefined,
+      })
+      savePrintContent(kitchenText)  // Hiện FAB trên Android
       printKitchenTicket({
         orderNumber: order.orderNumber || order.id,
         tableName: selectedTable ? `Bàn ${selectedTable.number}` : 'Mang đi',
@@ -129,8 +144,26 @@ export default function PosPage() {
     onSuccess: (_res, vars) => {
       toast.success('💰 Thanh toán thành công!')
 
-      // 🖨️ In hóa đơn thanh toán
+      // 🖨️ In hóa đơn thanh toán + lưu vào FAB Android
       const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0)
+      const receiptText = buildReceiptText({
+        orderNumber: currentOrderNumber || currentOrderId || '',
+        tableName: selectedTable ? `Bàn ${selectedTable.number}` : 'Mang đi',
+        items: cart.map(i => ({
+          name: i.name,
+          quantity: i.quantity,
+          unitPrice: i.price,
+          subtotal: i.price * i.quantity,
+        })),
+        subtotal,
+        discount: 0,
+        total: subtotal,
+        paymentMethod: vars.method,
+        note: note || undefined,
+        paidAt: new Date(),
+        cashierName: staffName || undefined,
+      })
+      savePrintContent(receiptText)  // Hiện FAB trên Android
       printReceipt({
         orderNumber: currentOrderNumber || currentOrderId || '',
         tableName: selectedTable ? `Bàn ${selectedTable.number}` : 'Mang đi',
@@ -551,6 +584,8 @@ export default function PosPage() {
               {formatPrice(totalPrice)}
             </span>
           </div>
+
+          {/* Nút chính: Gửi bếp / Thanh toán */}
           <button
             onClick={() => {
               if (!currentOrderId) {
@@ -569,12 +604,18 @@ export default function PosPage() {
             <CreditCard size={18} />
             {currentOrderId ? 'Thanh Toán' : 'Gửi bếp'}
           </button>
+
+          {/* Khu vực in — hiện khi đã có đơn */}
           {currentOrderId && (
-            <div>
-              <p className="text-xs mt-2" style={{ color: '#facc15' }}>
+            <div style={{ marginTop: '10px' }}>
+              {/* Thông báo đã gửi */}
+              <p className="text-xs mb-2" style={{ color: '#facc15' }}>
                 🖨️ Đã in phiếu bếp • #{currentOrderNumber}
               </p>
-              <div className="flex gap-2 mt-2">
+
+              {/* NÚT IN TO — dễ bấm trên màn hình cảm ứng iPOS */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                {/* In lại phiếu bếp */}
                 <button
                   onClick={() => printKitchenTicket({
                     orderNumber: currentOrderNumber || currentOrderId || '',
@@ -584,12 +625,65 @@ export default function PosPage() {
                     note: note || undefined,
                     staffName: staffName || undefined,
                   })}
-                  className="btn btn-outline btn-sm flex items-center gap-1"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    padding: '12px 8px',
+                    borderRadius: '12px',
+                    background: 'rgba(201,169,122,0.15)',
+                    border: '1.5px solid #c9a97a',
+                    color: '#c9a97a',
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    width: '100%',
+                  }}
                 >
-                  <Printer size={12} /> In lại phiếu
+                  <Printer size={15} />
+                  In phiếu bếp
                 </button>
-                <button onClick={saveOrderChanges} className="btn btn-outline btn-sm">Lưu</button>
-                <button onClick={cancelOrder} className="btn btn-error btn-sm">Hủy đơn</button>
+
+                {/* In hóa đơn thanh toán */}
+                <button
+                  onClick={() => {
+                    const sub = cart.reduce((s, i) => s + i.price * i.quantity, 0)
+                    printReceipt({
+                      orderNumber: currentOrderNumber || currentOrderId || '',
+                      tableName: selectedTable ? `Bàn ${selectedTable.number}` : 'Mang đi',
+                      items: cart.map(i => ({ name: i.name, quantity: i.quantity, unitPrice: i.price, subtotal: i.price * i.quantity })),
+                      subtotal: sub, discount: 0, total: sub,
+                      paymentMethod: 'CASH',
+                      note: note || undefined,
+                      cashierName: staffName || undefined,
+                    })
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    padding: '12px 8px',
+                    borderRadius: '12px',
+                    background: 'rgba(107,63,42,0.3)',
+                    border: '1.5px solid #6b3f2a',
+                    color: 'white',
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    width: '100%',
+                  }}
+                >
+                  <Printer size={15} />
+                  In hóa đơn
+                </button>
+              </div>
+
+              {/* Các nút phụ: Lưu / Hủy */}
+              <div className="flex gap-2">
+                <button onClick={saveOrderChanges} className="btn btn-outline btn-sm" style={{ flex: 1 }}>Lưu thay đổi</button>
+                <button onClick={cancelOrder} className="btn btn-error btn-sm" style={{ flex: 1 }}>Hủy đơn</button>
               </div>
             </div>
           )}
