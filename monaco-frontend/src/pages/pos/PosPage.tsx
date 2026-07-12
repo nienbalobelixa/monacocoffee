@@ -6,7 +6,7 @@ import { categoriesService } from '../../services/categories.service'
 import { toast } from 'sonner'
 import { useState } from 'react'
 import { Plus, Minus, Trash2, ShoppingCart, CreditCard, Loader2, RotateCcw, Printer } from 'lucide-react'
-import { printKitchenTicket, printReceipt, savePrintContent, buildKitchenText, buildReceiptText, isAndroidWebView } from '../../utils/print.service'
+import { printKitchenTicket, printReceipt } from '../../utils/print.service'
 import { useAuthStore } from '../../store/auth.store'
 
 const formatPrice = (p: number) => (p || 0).toLocaleString('vi-VN') + 'đ'
@@ -100,22 +100,7 @@ export default function PosPage() {
         })
       }
 
-      // 🖨️ In phiếu bếp + lưu vào FAB Android
-      const kitchenText = buildKitchenText({
-        orderNumber: order.orderNumber || order.id,
-        tableName: selectedTable ? `Bàn ${selectedTable.number}` : 'Mang đi',
-        type: order.type || (selectedTable ? 'DINE_IN' : 'TAKEAWAY'),
-        items: cart.map(i => ({
-          name: i.name,
-          quantity: i.quantity,
-          unitPrice: i.price,
-          subtotal: i.price * i.quantity,
-        })),
-        note: note || undefined,
-        createdAt: new Date(),
-        staffName: staffName || undefined,
-      })
-      savePrintContent(kitchenText)  // Hiện FAB trên Android
+      // 🖨️ In phiếu bếp
       printKitchenTicket({
         orderNumber: order.orderNumber || order.id,
         tableName: selectedTable ? `Bàn ${selectedTable.number}` : 'Mang đi',
@@ -144,26 +129,8 @@ export default function PosPage() {
     onSuccess: (_res, vars) => {
       toast.success('💰 Thanh toán thành công!')
 
-      // 🖨️ In hóa đơn thanh toán + lưu vào FAB Android
+      // 🖨️ In hóa đơn thanh toán
       const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0)
-      const receiptText = buildReceiptText({
-        orderNumber: currentOrderNumber || currentOrderId || '',
-        tableName: selectedTable ? `Bàn ${selectedTable.number}` : 'Mang đi',
-        items: cart.map(i => ({
-          name: i.name,
-          quantity: i.quantity,
-          unitPrice: i.price,
-          subtotal: i.price * i.quantity,
-        })),
-        subtotal,
-        discount: 0,
-        total: subtotal,
-        paymentMethod: vars.method,
-        note: note || undefined,
-        paidAt: new Date(),
-        cashierName: staffName || undefined,
-      })
-      savePrintContent(receiptText)  // Hiện FAB trên Android
       printReceipt({
         orderNumber: currentOrderNumber || currentOrderId || '',
         tableName: selectedTable ? `Bàn ${selectedTable.number}` : 'Mang đi',
@@ -584,8 +551,6 @@ export default function PosPage() {
               {formatPrice(totalPrice)}
             </span>
           </div>
-
-          {/* Nút chính: Gửi bếp / Thanh toán */}
           <button
             onClick={() => {
               if (!currentOrderId) {
@@ -604,18 +569,12 @@ export default function PosPage() {
             <CreditCard size={18} />
             {currentOrderId ? 'Thanh Toán' : 'Gửi bếp'}
           </button>
-
-          {/* Khu vực in — hiện khi đã có đơn */}
           {currentOrderId && (
-            <div style={{ marginTop: '10px' }}>
-              {/* Thông báo đã gửi */}
-              <p className="text-xs mb-2" style={{ color: '#facc15' }}>
+            <div>
+              <p className="text-xs mt-2" style={{ color: '#facc15' }}>
                 🖨️ Đã in phiếu bếp • #{currentOrderNumber}
               </p>
-
-              {/* NÚT IN TO — dễ bấm trên màn hình cảm ứng iPOS */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-                {/* In lại phiếu bếp */}
+              <div className="flex gap-2 mt-2">
                 <button
                   onClick={() => printKitchenTicket({
                     orderNumber: currentOrderNumber || currentOrderId || '',
@@ -625,124 +584,115 @@ export default function PosPage() {
                     note: note || undefined,
                     staffName: staffName || undefined,
                   })}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    padding: '12px 8px',
-                    borderRadius: '12px',
-                    background: 'rgba(201,169,122,0.15)',
-                    border: '1.5px solid #c9a97a',
-                    color: '#c9a97a',
-                    fontWeight: 700,
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    width: '100%',
-                  }}
+                  className="btn btn-outline btn-sm flex items-center gap-1"
                 >
-                  <Printer size={15} />
-                  In phiếu bếp
+                  <Printer size={12} /> In lại phiếu
                 </button>
-
-                {/* In hóa đơn thanh toán */}
-                <button
-                  onClick={() => {
-                    const sub = cart.reduce((s, i) => s + i.price * i.quantity, 0)
-                    printReceipt({
-                      orderNumber: currentOrderNumber || currentOrderId || '',
-                      tableName: selectedTable ? `Bàn ${selectedTable.number}` : 'Mang đi',
-                      items: cart.map(i => ({ name: i.name, quantity: i.quantity, unitPrice: i.price, subtotal: i.price * i.quantity })),
-                      subtotal: sub, discount: 0, total: sub,
-                      paymentMethod: 'CASH',
-                      note: note || undefined,
-                      cashierName: staffName || undefined,
-                    })
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    padding: '12px 8px',
-                    borderRadius: '12px',
-                    background: 'rgba(107,63,42,0.3)',
-                    border: '1.5px solid #6b3f2a',
-                    color: 'white',
-                    fontWeight: 700,
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    width: '100%',
-                  }}
-                >
-                  <Printer size={15} />
-                  In hóa đơn
-                </button>
-              </div>
-
-              {/* Các nút phụ: Lưu / Hủy */}
-              <div className="flex gap-2">
-                <button onClick={saveOrderChanges} className="btn btn-outline btn-sm" style={{ flex: 1 }}>Lưu thay đổi</button>
-                <button onClick={cancelOrder} className="btn btn-error btn-sm" style={{ flex: 1 }}>Hủy đơn</button>
+                <button onClick={saveOrderChanges} className="btn btn-outline btn-sm">Lưu</button>
+                <button onClick={cancelOrder} className="btn btn-error btn-sm">Hủy đơn</button>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Payment Modal */}
+      {/* Payment Modal — Bottom Sheet (tương thích iPOS màn nhỏ) */}
       {paymentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
+          {/* Backdrop */}
           <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.75)' }}
             onClick={() => !payMutation.isPending && setPaymentModal(false)} />
-          <div className="relative bg-white rounded-2xl p-6 w-full max-w-sm z-10 shadow-2xl">
-            <h3 className="text-xl font-bold mb-1" style={{ fontFamily: 'Playfair Display, serif', color: '#2d1200' }}>
-              Thanh Toán 🖨️
-            </h3>
-            <p className="text-sm mb-1" style={{ color: '#9ca3af' }}>
-              {selectedTable ? `Bàn ${selectedTable.number}` : 'Mang đi'} • {totalItems} món
-            </p>
-            <p className="text-xs mb-4" style={{ color: '#16a34a' }}>
-              ✅ Hóa đơn sẽ được in tự động sau khi xác nhận
-            </p>
 
-            <div className="flex flex-col gap-3 mb-5">
-              {[
-                { value: 'CASH', label: '💵 Tiền Mặt', desc: 'Thanh toán trực tiếp' },
-                { value: 'BANK_TRANSFER', label: '🏦 Chuyển Khoản', desc: 'ATM / Internet Banking' },
-                { value: 'QR_CODE', label: '📱 QR Code', desc: 'Quét mã thanh toán' },
-              ].map(({ value, label, desc }) => (
-                <label key={value}
-                  className="flex items-center gap-3 p-3.5 rounded-xl cursor-pointer transition-all"
-                  style={{
-                    background: paymentMethod === value ? '#f4ede6' : '#fdf9f6',
-                    border: `2px solid ${paymentMethod === value ? '#6b3f2a' : '#e8d9cc'}`,
-                  }}>
-                  <input type="radio" name="pos-pm" value={value}
-                    checked={paymentMethod === value} onChange={() => setPaymentMethod(value)}
-                    style={{ accentColor: '#6b3f2a' }} />
-                  <div>
-                    <p className="font-semibold text-sm" style={{ color: '#2d1200' }}>{label}</p>
-                    <p className="text-xs" style={{ color: '#9ca3af' }}>{desc}</p>
-                  </div>
-                </label>
-              ))}
+          {/* Modal bottom-sheet */}
+          <div className="relative bg-white z-10 shadow-2xl w-full"
+            style={{ borderRadius: '20px 20px 0 0', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+
+            {/* Header cố định — luôn hiện */}
+            <div className="flex-shrink-0 flex items-center justify-between px-5 pt-5 pb-3"
+              style={{ borderBottom: '1px solid #f3f4f6' }}>
+              <div>
+                <h3 className="text-lg font-bold" style={{ fontFamily: 'Playfair Display, serif', color: '#2d1200' }}>
+                  Thanh Toán 🖨️
+                </h3>
+                <p className="text-xs mt-0.5" style={{ color: '#9ca3af' }}>
+                  {selectedTable ? `Bàn ${selectedTable.number}` : 'Mang đi'} • {totalItems} món • {formatPrice(totalPrice)}
+                </p>
+              </div>
+              {/* NÚT X — luôn hiện, không bao giờ bị ẩn */}
+              <button
+                onClick={() => !payMutation.isPending && setPaymentModal(false)}
+                disabled={payMutation.isPending}
+                style={{
+                  width: 44, height: 44, borderRadius: '50%',
+                  background: '#f3f4f6', border: 'none',
+                  fontSize: 20, lineHeight: 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', color: '#374151', flexShrink: 0,
+                }}>
+                ✕
+              </button>
             </div>
 
-            <div className="flex items-center justify-between py-3 px-4 rounded-xl mb-5"
-              style={{ background: '#fdf8f0' }}>
-              <span className="font-bold" style={{ color: '#2d1200' }}>Tổng cộng</span>
-              <span className="text-2xl font-bold" style={{ color: '#6b3f2a' }}>{formatPrice(totalPrice)}</span>
+            {/* Nội dung cuộn được */}
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              <p className="text-xs mb-4" style={{ color: '#16a34a' }}>
+                ✅ Hóa đơn sẽ được in tự động sau khi xác nhận
+              </p>
+              <div className="flex flex-col gap-3 mb-4">
+                {[
+                  { value: 'CASH', label: '💵 Tiền Mặt', desc: 'Thanh toán trực tiếp' },
+                  { value: 'BANK_TRANSFER', label: '🏦 Chuyển Khoản', desc: 'ATM / Internet Banking' },
+                  { value: 'QR_CODE', label: '📱 QR Code', desc: 'Quét mã thanh toán' },
+                ].map(({ value, label, desc }) => (
+                  <label key={value}
+                    className="flex items-center gap-3 cursor-pointer transition-all"
+                    style={{
+                      padding: '14px 16px', borderRadius: 14, minHeight: 56,
+                      background: paymentMethod === value ? '#f4ede6' : '#fdf9f6',
+                      border: `2px solid ${paymentMethod === value ? '#6b3f2a' : '#e8d9cc'}`,
+                    }}>
+                    <input type="radio" name="pos-pm" value={value}
+                      checked={paymentMethod === value} onChange={() => setPaymentMethod(value)}
+                      style={{ accentColor: '#6b3f2a', width: 20, height: 20 }} />
+                    <div>
+                      <p className="font-semibold text-sm" style={{ color: '#2d1200' }}>{label}</p>
+                      <p className="text-xs" style={{ color: '#9ca3af' }}>{desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              <div className="flex items-center justify-between py-3 px-4 rounded-xl"
+                style={{ background: '#fdf8f0' }}>
+                <span className="font-bold" style={{ color: '#2d1200' }}>Tổng cộng</span>
+                <span className="text-2xl font-bold" style={{ color: '#6b3f2a' }}>{formatPrice(totalPrice)}</span>
+              </div>
             </div>
 
-            <div className="flex gap-3">
-              <button onClick={() => setPaymentModal(false)} disabled={payMutation.isPending}
-                className="btn btn-outline flex-1">Hủy</button>
-              <button onClick={handleConfirmPayment} disabled={payMutation.isPending}
-                className="btn btn-primary flex-1 justify-center">
+            {/* Buttons cố định ở dưới — luôn hiện, không bao giờ bị ẩn */}
+            <div className="flex-shrink-0 flex gap-3 px-5 py-4"
+              style={{ borderTop: '1px solid #f3f4f6' }}>
+              <button
+                onClick={() => setPaymentModal(false)}
+                disabled={payMutation.isPending}
+                style={{
+                  flex: 1, height: 52, borderRadius: 14, fontWeight: 700, fontSize: 15,
+                  background: '#f3f4f6', color: '#374151', border: 'none', cursor: 'pointer',
+                }}>
+                Hủy
+              </button>
+              <button
+                onClick={handleConfirmPayment}
+                disabled={payMutation.isPending}
+                style={{
+                  flex: 2, height: 52, borderRadius: 14, fontWeight: 700, fontSize: 15,
+                  background: payMutation.isPending ? '#9ca3af' : 'linear-gradient(135deg,#6b3f2a,#c9a97a)',
+                  color: 'white', border: 'none',
+                  cursor: payMutation.isPending ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                }}>
                 {payMutation.isPending
-                  ? <><Loader2 size={16} className="animate-spin" /> Xử lý...</>
-                  : '✓ Xác Nhận'}
+                  ? <><Loader2 size={18} className="animate-spin" /> Đang xử lý...</>
+                  : '✓ Xác Nhận Thanh Toán'}
               </button>
             </div>
           </div>
