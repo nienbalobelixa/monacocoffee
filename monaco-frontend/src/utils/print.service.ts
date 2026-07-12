@@ -55,10 +55,8 @@ declare global {
       printToAddress(address: string, text: string): void
       getBluetoothPrinters(): string   // JSON string
       getUsbPrinters(): string          // JSON string
-      setPrintContent(text: string): void  // Lưu nội dung → hiện FAB
     }
     __MONACO_ANDROID__?: boolean
-    __monacoPrintCurrent?: () => string
   }
 }
 
@@ -97,7 +95,7 @@ const PAYMENT_LABELS: Record<string, string> = {
 }
 
 // ── Build plain-text kitchen ticket ───────────────────────────────
-export function buildKitchenText(data: KitchenTicketData): string {
+function buildKitchenText(data: KitchenTicketData): string {
   const now = data.createdAt ? new Date(data.createdAt) : new Date()
   const time = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
   const date = now.toLocaleDateString('vi-VN')
@@ -129,7 +127,7 @@ export function buildKitchenText(data: KitchenTicketData): string {
 }
 
 // ── Build plain-text receipt ───────────────────────────────────────
-export function buildReceiptText(data: ReceiptData): string {
+function buildReceiptText(data: ReceiptData): string {
   const now = data.paidAt ? new Date(data.paidAt) : new Date()
   const time = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
   const date = now.toLocaleDateString('vi-VN')
@@ -170,13 +168,6 @@ export function buildReceiptText(data: ReceiptData): string {
 function doPrint(text: string, htmlFallback: () => void) {
   // 1. Android WebView bridge
   if (window.MonacoPrinter?.printText) {
-    // Lưu nội dung → FAB nút in trên Android luôn có sẵn để in lại
-    if (window.MonacoPrinter.setPrintContent) {
-      window.MonacoPrinter.setPrintContent(text)
-    }
-    // Đăng ký hàm lấy nội dung hiện tại (FAB dùng)
-    window.__monacoPrintCurrent = () => text
-
     const savedAddr = printerPrefs.getAddress()
     if (savedAddr && window.MonacoPrinter.printToAddress) {
       window.MonacoPrinter.printToAddress(savedAddr, text)
@@ -188,17 +179,6 @@ function doPrint(text: string, htmlFallback: () => void) {
   // 2. Browser fallback
   htmlFallback()
 }
-
-/** Chỉ lưu nội dung vào FAB (không in ngay) — dùng khi muốn hiện nút in trước */
-export function savePrintContent(text: string) {
-  if (window.MonacoPrinter?.setPrintContent) {
-    window.MonacoPrinter.setPrintContent(text)
-  }
-  window.__monacoPrintCurrent = () => text
-}
-
-/** Export để PosPage build text và lưu vào FAB */
-export { buildKitchenText, buildReceiptText }
 
 // ─────────────────────────────────────────────────────────────────
 // PUBLIC API

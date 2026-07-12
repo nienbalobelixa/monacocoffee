@@ -23,6 +23,7 @@ import RegisterPage from './pages/auth/RegisterPage'
 // POS pages
 import PosPage from './pages/pos/PosPage'
 import PosOrdersPage from './pages/pos/PosOrdersPage'
+import PrinterSettingsPage from './pages/pos/PrinterSettingsPage'
 
 // Admin pages
 import DashboardPage from './pages/admin/DashboardPage'
@@ -66,6 +67,7 @@ export default function App() {
         <Route element={<PosLayout />}>
           <Route path="/pos" element={<PosPage />} />
           <Route path="/pos/orders" element={<PosOrdersPage />} />
+          <Route path="/pos/printer" element={<PrinterSettingsPage />} />
         </Route>
       </Route>
 

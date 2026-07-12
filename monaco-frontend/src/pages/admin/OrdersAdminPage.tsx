@@ -135,7 +135,7 @@ export default function OrdersAdminPage() {
 
       {meta && meta.totalPages > 1 && (
         <div className="flex justify-center gap-2 mt-6">
-          {Array.from({ length: meta.totalPages }, (_, i) => i + 1).map((p) => (
+          {Array.from({ length: meta.totalPages }, (_value: unknown, i: number) => i + 1).map((p) => (
             <button key={p} onClick={() => setPage(p)} className={`btn btn-sm ${p === page ? 'btn-primary' : 'btn-outline'}`}>{p}</button>
           ))}
         </div>
@@ -203,7 +203,7 @@ function EditOrderModal({ order, open, onClose, onSave }: { order: any, open: bo
                   <div className="flex-1 text-sm" style={{ color: '#2d1200' }}>{it.name}</div>
                   <input type="number" min={1} className="input w-24" value={it.quantity}
                     onChange={(e) => { const q = Number(e.target.value || 0); const items = [...form.items]; items[idx] = { ...items[idx], quantity: q }; setForm({ ...form, items }) }} />
-                  <button className="btn btn-ghost btn-sm" onClick={() => { const items = form.items.filter((_, i) => i !== idx); setForm({ ...form, items }) }} title="Xóa món"><Trash size={16} /></button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => { const items = form.items.filter((_item: unknown, i: number) => i !== idx); setForm({ ...form, items }) }} title="Xóa món"><Trash size={16} /></button>
                 </div>
               ))}
 
