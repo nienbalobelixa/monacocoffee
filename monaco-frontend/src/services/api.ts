@@ -2,9 +2,9 @@ import axios from 'axios'
 import { useAuthStore } from '../store/auth.store'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: { 'Content-Type': 'application/json' },
-  timeout: 15000,
+  timeout: 30000, // 30s cho Render.com cold start
 })
 
 // ────────────────────────────────────────────────────────────
@@ -56,7 +56,7 @@ api.interceptors.response.use(
         if (!refreshToken) throw new Error('No refresh token')
 
         const { data } = await axios.post(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/auth/refresh`,
+          `${import.meta.env.VITE_API_URL || '/api'}/auth/refresh`,
           { refreshToken }
         )
 

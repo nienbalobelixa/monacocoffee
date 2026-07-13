@@ -39,7 +39,12 @@ export default function LoginPage() {
       else if (r.user?.role === 'STAFF') navigate('/pos')
       else navigate(from)
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Đăng nhập thất bại'
+      let msg = err?.response?.data?.message || err?.message || 'Đăng nhập thất bại'
+      if (err?.code === 'ECONNABORTED' || msg.includes('timeout')) {
+        msg = 'Server đang khởi động, vui lòng thử lại sau 30 giây...'
+      } else if (err?.code === 'ERR_NETWORK' || !err?.response) {
+        msg = 'Không kết nối được server. Kiểm tra mạng và thử lại!'
+      }
       toast.error(msg)
     }
   }
