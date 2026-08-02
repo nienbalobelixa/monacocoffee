@@ -5,7 +5,7 @@ import legacy from '@vitejs/plugin-legacy'
 import path from 'path'
 
 export default defineConfig({
-  base: '/',
+  base: './',
   plugins: [
     react(),
     tailwindcss(),

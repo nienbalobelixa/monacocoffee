@@ -1,0 +1,71 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'vn.monaco.coffee'
+    compileSdk 34
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    defaultConfig {
+        applicationId 'vn.monaco.coffee'
+        minSdk 23
+        targetSdk 34
+        versionCode 4
+        versionName '1.3.0'
+
+        // URL production Vercel chinh thuc
+        buildConfigField 'String', 'MONACO_URL', '"https://monaco-pos.vercel.app"'
+        buildConfigField 'String', 'PRINTER_BT_NAME', '"Printer"'
+        buildConfigField 'int', 'PRINTER_TIMEOUT_MS', '6000'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    buildTypes {
+        debug {
+            // Production URL - dung Vercel chinh thuc
+            buildConfigField 'String', 'MONACO_URL', '"https://monaco-pos.vercel.app"'
+            buildConfigField 'String', 'PRINTER_BT_NAME', '"Printer"'
+            debuggable true
+        }
+        release {
+            debuggable false
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // Release dung MONACO_URL tu defaultConfig (Vercel)
+        }
+    }
+}
+
+def frontendRoot = file("${rootDir}/../monaco-frontend")
+def frontendDistDir = file("${frontendRoot}/dist")
+def androidAssetsDir = file("${projectDir}/src/main/assets/www")
+
+// Xóa www cũ trước khi copy để tránh file hash cũ còn sót
+tasks.register('cleanAndroidAssets', Delete) {
+    delete androidAssetsDir
+}
+
+tasks.register('copyFrontendBundleToAndroidAssets', Copy) {
+    dependsOn 'cleanAndroidAssets'
+    onlyIf { frontendDistDir.exists() }
+    from(frontendDistDir) {
+        include '**/*'
+    }
+    into androidAssetsDir
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+tasks.named('preBuild') {
+    dependsOn 'copyFrontendBundleToAndroidAssets'
+}
+
+dependencies {}
+
