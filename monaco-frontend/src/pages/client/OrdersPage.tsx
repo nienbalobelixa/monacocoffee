@@ -3,7 +3,7 @@ import { ordersService } from '../../services/orders.service'
 import { productsService } from '../../services/products.service'
 import { Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { ChevronRight, Package, Pencil, Trash, Plus, Minus } from 'lucide-react'
+import { Package, Pencil, Trash, Plus, Minus } from 'lucide-react'
 import { toast } from 'sonner'
 
 const formatPrice = (p: number) => p?.toLocaleString('vi-VN') + 'đ'

@@ -2,25 +2,54 @@ import { Outlet } from 'react-router-dom'
 
 export default function AuthLayout() {
   return (
-    <div className="min-h-screen flex" style={{ background: 'linear-gradient(135deg, #1a0a00 0%, #4a1e00 50%, #6b3f2a 100%)' }}>
-      {/* Left side — branding */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center p-12 text-white">
-        <div className="text-center">
-          <div className="text-6xl mb-6">☕</div>
-          <h1 className="text-5xl font-bold mb-4" style={{ fontFamily: 'Playfair Display, serif' }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        background: 'linear-gradient(135deg, #1a0a00 0%, #4a1e00 50%, #6b3f2a 100%)',
+      }}
+    >
+      {/* Left side — branding (chỉ hiện trên màn lớn >= 1024px) */}
+      <div
+        style={{
+          display: 'none',
+          flex: '0 0 50%',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '3rem',
+          color: 'white',
+        }}
+        className="lg:flex lg:flex-col"
+      >
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>☕</div>
+          <h1
+            style={{
+              fontSize: '3rem',
+              fontWeight: 700,
+              marginBottom: '1rem',
+              fontFamily: 'Playfair Display, serif',
+            }}
+          >
             Monaco Coffee
           </h1>
-          <p className="text-xl opacity-80 mb-8" style={{ fontFamily: 'Inter, sans-serif' }}>
+          <p style={{ fontSize: '1.25rem', opacity: 0.8, marginBottom: '2rem', fontFamily: 'Inter, sans-serif' }}>
             Where every cup tells a story
           </p>
-          <div className="grid grid-cols-3 gap-6 mt-12">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '1.5rem', marginTop: '3rem' }}>
             {['Premium Beans', 'Expert Baristas', 'Perfect Ambiance'].map((item) => (
-              <div key={item} className="text-center">
-                <div className="w-14 h-14 mx-auto mb-3 rounded-xl flex items-center justify-center"
-                  style={{ background: 'rgba(255,255,255,0.1)' }}>
-                  <span className="text-2xl">☕</span>
+              <div key={item} style={{ textAlign: 'center' }}>
+                <div
+                  style={{
+                    width: 56, height: 56, margin: '0 auto 0.75rem',
+                    borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'rgba(255,255,255,0.1)',
+                  }}
+                >
+                  <span style={{ fontSize: '1.5rem' }}>☕</span>
                 </div>
-                <p className="text-sm opacity-70">{item}</p>
+                <p style={{ fontSize: '0.875rem', opacity: 0.7 }}>{item}</p>
               </div>
             ))}
           </div>
@@ -28,12 +57,42 @@ export default function AuthLayout() {
       </div>
 
       {/* Right side — form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
-          <div className="bg-white rounded-2xl shadow-2xl p-8">
-            <div className="text-center mb-8 lg:hidden">
-              <span className="text-4xl">☕</span>
-              <h1 className="text-2xl font-bold mt-2" style={{ fontFamily: 'Playfair Display, serif', color: '#6b3f2a' }}>Monaco Coffee</h1>
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2rem 1rem',
+          overflowY: 'auto',
+        }}
+      >
+        <div style={{ width: '100%', maxWidth: 440 }}>
+          <div
+            style={{
+              background: 'white',
+              borderRadius: 20,
+              boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
+              padding: '2rem',
+            }}
+          >
+            {/* Logo nhỏ — chỉ hiện trên mobile */}
+            <div
+              style={{ textAlign: 'center', marginBottom: '1.5rem' }}
+              className="lg:hidden"
+            >
+              <span style={{ fontSize: '2.5rem' }}>☕</span>
+              <h1
+                style={{
+                  fontSize: '1.5rem',
+                  fontWeight: 700,
+                  marginTop: '0.5rem',
+                  fontFamily: 'Playfair Display, serif',
+                  color: '#6b3f2a',
+                }}
+              >
+                Monaco Coffee
+              </h1>
             </div>
             <Outlet />
           </div>

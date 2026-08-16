@@ -5,7 +5,7 @@ import { CalendarClock, Users, Phone } from 'lucide-react'
 import { toast } from 'sonner'
 
 const statusColors: Record<string, string> = {
-  PENDING: '#f59e0b', CONFIRMED: '#3b82f6', CANCELLED: '#dc2626', COMPLETED: '#16a34a', NO_SHOW: '#6b7280'
+  PENDING: '#f59e0b', CONFIRMED: '#3b82f6', CANCELLED: '#dc2626', COMPLETED: '#16a34a'
 }
 const statusLabels: Record<string, string> = {
   PENDING: 'Chờ xác nhận', CONFIRMED: 'Đã xác nhận', CANCELLED: 'Đã hủy', COMPLETED: 'Hoàn thành', NO_SHOW: 'Không đến'
@@ -25,7 +25,11 @@ export default function ReservationsAdminPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-reservations'] }); toast.success('Cập nhật thành công') },
   })
 
-  const reservations = data?.data || []
+  const reservations = Array.isArray(data?.data)
+    ? data.data
+    : Array.isArray(data?.data?.data)
+      ? data.data.data
+      : []
 
   return (
     <div className="animate-fade-in">
@@ -90,7 +94,7 @@ export default function ReservationsAdminPage() {
                   <select value={res.status}
                     onChange={(e) => statusMutation.mutate({ id: res.id, status: e.target.value })}
                     className="input text-sm" style={{ padding: '0.375rem 0.75rem' }}>
-                    {Object.entries(statusLabels).map(([s, l]) => (
+                    {Object.entries(statusLabels).filter(([s]) => s !== 'NO_SHOW').map(([s, l]) => (
                       <option key={s} value={s}>{l}</option>
                     ))}
                   </select>

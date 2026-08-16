@@ -596,59 +596,103 @@ export default function PosPage() {
         </div>
       </div>
 
-      {/* Payment Modal */}
+      {/* Payment Modal — Bottom Sheet (tương thích iPOS màn nhỏ) */}
       {paymentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
+          {/* Backdrop */}
           <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.75)' }}
             onClick={() => !payMutation.isPending && setPaymentModal(false)} />
-          <div className="relative bg-white rounded-2xl p-6 w-full max-w-sm z-10 shadow-2xl">
-            <h3 className="text-xl font-bold mb-1" style={{ fontFamily: 'Playfair Display, serif', color: '#2d1200' }}>
-              Thanh Toán 🖨️
-            </h3>
-            <p className="text-sm mb-1" style={{ color: '#9ca3af' }}>
-              {selectedTable ? `Bàn ${selectedTable.number}` : 'Mang đi'} • {totalItems} món
-            </p>
-            <p className="text-xs mb-4" style={{ color: '#16a34a' }}>
-              ✅ Hóa đơn sẽ được in tự động sau khi xác nhận
-            </p>
 
-            <div className="flex flex-col gap-3 mb-5">
-              {[
-                { value: 'CASH', label: '💵 Tiền Mặt', desc: 'Thanh toán trực tiếp' },
-                { value: 'BANK_TRANSFER', label: '🏦 Chuyển Khoản', desc: 'ATM / Internet Banking' },
-                { value: 'QR_CODE', label: '📱 QR Code', desc: 'Quét mã thanh toán' },
-              ].map(({ value, label, desc }) => (
-                <label key={value}
-                  className="flex items-center gap-3 p-3.5 rounded-xl cursor-pointer transition-all"
-                  style={{
-                    background: paymentMethod === value ? '#f4ede6' : '#fdf9f6',
-                    border: `2px solid ${paymentMethod === value ? '#6b3f2a' : '#e8d9cc'}`,
-                  }}>
-                  <input type="radio" name="pos-pm" value={value}
-                    checked={paymentMethod === value} onChange={() => setPaymentMethod(value)}
-                    style={{ accentColor: '#6b3f2a' }} />
-                  <div>
-                    <p className="font-semibold text-sm" style={{ color: '#2d1200' }}>{label}</p>
-                    <p className="text-xs" style={{ color: '#9ca3af' }}>{desc}</p>
-                  </div>
-                </label>
-              ))}
+          {/* Modal bottom-sheet */}
+          <div className="relative bg-white z-10 shadow-2xl w-full"
+            style={{ borderRadius: '20px 20px 0 0', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+
+            {/* Header cố định — luôn hiện */}
+            <div className="flex-shrink-0 flex items-center justify-between px-5 pt-5 pb-3"
+              style={{ borderBottom: '1px solid #f3f4f6' }}>
+              <div>
+                <h3 className="text-lg font-bold" style={{ fontFamily: 'Playfair Display, serif', color: '#2d1200' }}>
+                  Thanh Toán 🖨️
+                </h3>
+                <p className="text-xs mt-0.5" style={{ color: '#9ca3af' }}>
+                  {selectedTable ? `Bàn ${selectedTable.number}` : 'Mang đi'} • {totalItems} món • {formatPrice(totalPrice)}
+                </p>
+              </div>
+              {/* NÚT X — luôn hiện, không bao giờ bị ẩn */}
+              <button
+                onClick={() => !payMutation.isPending && setPaymentModal(false)}
+                disabled={payMutation.isPending}
+                style={{
+                  width: 44, height: 44, borderRadius: '50%',
+                  background: '#f3f4f6', border: 'none',
+                  fontSize: 20, lineHeight: 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', color: '#374151', flexShrink: 0,
+                }}>
+                ✕
+              </button>
             </div>
 
-            <div className="flex items-center justify-between py-3 px-4 rounded-xl mb-5"
-              style={{ background: '#fdf8f0' }}>
-              <span className="font-bold" style={{ color: '#2d1200' }}>Tổng cộng</span>
-              <span className="text-2xl font-bold" style={{ color: '#6b3f2a' }}>{formatPrice(totalPrice)}</span>
+            {/* Nội dung cuộn được */}
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              <p className="text-xs mb-4" style={{ color: '#16a34a' }}>
+                ✅ Hóa đơn sẽ được in tự động sau khi xác nhận
+              </p>
+              <div className="flex flex-col gap-3 mb-4">
+                {[
+                  { value: 'CASH', label: '💵 Tiền Mặt', desc: 'Thanh toán trực tiếp' },
+                  { value: 'BANK_TRANSFER', label: '🏦 Chuyển Khoản', desc: 'ATM / Internet Banking' },
+                  { value: 'QR_CODE', label: '📱 QR Code', desc: 'Quét mã thanh toán' },
+                ].map(({ value, label, desc }) => (
+                  <label key={value}
+                    className="flex items-center gap-3 cursor-pointer transition-all"
+                    style={{
+                      padding: '14px 16px', borderRadius: 14, minHeight: 56,
+                      background: paymentMethod === value ? '#f4ede6' : '#fdf9f6',
+                      border: `2px solid ${paymentMethod === value ? '#6b3f2a' : '#e8d9cc'}`,
+                    }}>
+                    <input type="radio" name="pos-pm" value={value}
+                      checked={paymentMethod === value} onChange={() => setPaymentMethod(value)}
+                      style={{ accentColor: '#6b3f2a', width: 20, height: 20 }} />
+                    <div>
+                      <p className="font-semibold text-sm" style={{ color: '#2d1200' }}>{label}</p>
+                      <p className="text-xs" style={{ color: '#9ca3af' }}>{desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              <div className="flex items-center justify-between py-3 px-4 rounded-xl"
+                style={{ background: '#fdf8f0' }}>
+                <span className="font-bold" style={{ color: '#2d1200' }}>Tổng cộng</span>
+                <span className="text-2xl font-bold" style={{ color: '#6b3f2a' }}>{formatPrice(totalPrice)}</span>
+              </div>
             </div>
 
-            <div className="flex gap-3">
-              <button onClick={() => setPaymentModal(false)} disabled={payMutation.isPending}
-                className="btn btn-outline flex-1">Hủy</button>
-              <button onClick={handleConfirmPayment} disabled={payMutation.isPending}
-                className="btn btn-primary flex-1 justify-center">
+            {/* Buttons cố định ở dưới — luôn hiện, không bao giờ bị ẩn */}
+            <div className="flex-shrink-0 flex gap-3 px-5 py-4"
+              style={{ borderTop: '1px solid #f3f4f6' }}>
+              <button
+                onClick={() => setPaymentModal(false)}
+                disabled={payMutation.isPending}
+                style={{
+                  flex: 1, height: 52, borderRadius: 14, fontWeight: 700, fontSize: 15,
+                  background: '#f3f4f6', color: '#374151', border: 'none', cursor: 'pointer',
+                }}>
+                Hủy
+              </button>
+              <button
+                onClick={handleConfirmPayment}
+                disabled={payMutation.isPending}
+                style={{
+                  flex: 2, height: 52, borderRadius: 14, fontWeight: 700, fontSize: 15,
+                  background: payMutation.isPending ? '#9ca3af' : 'linear-gradient(135deg,#6b3f2a,#c9a97a)',
+                  color: 'white', border: 'none',
+                  cursor: payMutation.isPending ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                }}>
                 {payMutation.isPending
-                  ? <><Loader2 size={16} className="animate-spin" /> Xử lý...</>
-                  : '✓ Xác Nhận'}
+                  ? <><Loader2 size={18} className="animate-spin" /> Đang xử lý...</>
+                  : '✓ Xác Nhận Thanh Toán'}
               </button>
             </div>
           </div>
